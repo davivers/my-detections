@@ -1,0 +1,85 @@
+schema_version: 1
+
+# Where the Sigma rules, the test cases, the replay datasets and the compiled output live.
+rules_dir: rules
+cases_dir: cases
+datasets_dir: datasets
+output_dir: dist
+
+# Active SIEMs. `vitrix targets` lists the available ones (built-in and plugins).
+targets:
+  - splunk
+  - kql
+  - elastic-eql
+
+# Final query language: choose it in the app, not here. The Editor header has a "Final language" selector
+# for a rule ("Keep as Sigma (no conversion)", Splunk, KQL, ...), and Settings -> "Final language" sets the
+# workspace and per-folder defaults. They are stored in the rule (`vitrix: {target: ...}`) and in
+# `mappings.yml` (written by the app). Order: rule, mappings.yml folder, mappings.yml default, then the
+# legacy settings below, then every active target. `default_target` and `routes` still work but are legacy.
+default_target: splunk
+routes: []
+#  - match: "azure/*"
+#    target: kql
+
+# pySigma pipelines with the field mapping of YOUR environment.
+# Applied before each SIEM's default mapping.
+# extra_pipelines:
+#   - pipelines/my-environment.yml
+
+# Every rule needs a cases file with at least one positive and one negative case.
+require_cases: true
+
+# What a rule needs to be publishable (defaults shown).
+quality_gate:
+  min_positive: 1
+  min_negative: 1
+  # false_positive_levels: [critical]      # opt-in: these levels require a kind: false_positive case (off by default)
+  require_filter_test: true                 # a rule with filter_* needs a case proving the exclusion
+  require_mitre: true
+  allow_warnings: true                      # false: any lint warning blocks
+  blocked_status: [deprecated, unsupported]
+  require_replay: false                     # true: the rule needs an expectation in some dataset
+  review_days: 180                          # recommend reviewing rules unchanged for longer (0 = off)
+  min_score: 80                             # health score (0-100) a rule needs to be approved (0 = no threshold)
+
+# GitHub: NOTHING TO SET HERE when this folder is on GitHub. Run `vitrix connect your-org/your-repo`
+# once: it reads the repository from `git remote origin`, uses your `gh auth login` as the token,
+# and checks the CI workflow. Vitrix validates every change in the real CI (GitHub Actions) and
+# only then opens the pull request.
+# Only to override what is detected (or `github: false` to turn GitHub off):
+# github:
+#   repo: your-org/your-detections
+#   base: main
+#   path: ""           # the project folder inside the repository, if not the root
+#   workflow: vitrix   # the workflow in .github/workflows/vitrix.yml
+# The token is NEVER read from this file: `gh auth login`, or VITRIX_GITHUB_TOKEN in the environment.
+
+# Accounts: several people in one workspace (one workspace = this repository).
+# ON by default: the first screen asks you to create the owner; after that people can join ONLY by
+# invitation (no open sign-up). To run without accounts (single local user) set `enabled: false`
+# or start the server with VITRIX_AUTH=off. Served on a non-local address (--host 0.0.0.0), the
+# first account also needs a setup token, printed in the server log.
+# GitHub sign-in needs a GitHub OAuth app: set VITRIX_GITHUB_CLIENT_ID and
+# VITRIX_GITHUB_CLIENT_SECRET (callback: <public url>/api/auth/github/callback).
+# auth:
+#   enabled: true      # false = no accounts (localhost only)
+#   session_days: 14
+#   github_login: true
+#   workspace_name: Detection workspace
+
+# KQL needs a table. The Kusto backend infers it from the logsource category or the EventID. For rules it
+# cannot place, fix it in the Editor (Queries panel -> "Pick the table": for this rule, or for every rule
+# with that logsource); the app stores it in `mappings.yml` (field mappings too). You do not need to edit
+# this file or mappings.yml by hand. Resolution order: the rule's `vitrix: {kql_table: ...}`,
+# mappings.yml, the tables below, built-in defaults, default_table. KQL only fails the rule when KQL is
+# its final language; elsewhere it is an informational preview.
+# kql:
+#   tables:
+#     windows/system: Event
+#   default_table: Event
+
+# Local drafts: "Save draft" in the Editor keeps unfinished rules in .vitrix/drafts.db (never in
+# rules/). Without accounts they work only for a browser on this machine with a localhost-only server.
+# drafts:
+#   enabled: true
