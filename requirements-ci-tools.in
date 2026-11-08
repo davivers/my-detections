@@ -1,0 +1,6 @@
+# Ferramentas usadas pelo workflow dac-security (jobs static e toolchain).
+# Gere o .txt travado com:
+#   uv pip compile requirements-ci-tools.in --generate-hashes --python-version 3.12 --python-platform linux -o requirements-ci-tools.txt
+yamllint
+zizmor
+pip-audit
