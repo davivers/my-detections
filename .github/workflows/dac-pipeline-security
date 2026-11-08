@@ -1,0 +1,118 @@
+name: dac-pipeline-security #pipeline with secrets scanning, sensitive data within cases, yaml lint, workflow security, toolchain vulns and SBOM 
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: 8.30.0
+
+#scan for secrets using gitleaks
+jobs:
+  secrets:
+    runs-on: ubuntu_latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks git . --redact --no-banner --report-format sarif --report-path gitleaks.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks 
+
+#scan for company data within cases and generates an actions report summary  
+data-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Gitleaks com regras de higiene de dados
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks dir . --config .gitleaks-data.toml --redact --no-banner \
+            --exit-code 0 --report-format json --report-path data-hygiene.json
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          hits = json.load(open("data-hygiene.json"))
+          print(f"### Higiene de dados: {len(hits)} ocorrência(s)\n")
+          if hits:
+              print("| Regra | Arquivo | Linha |\n|---|---|---|")
+              for h in hits[:50]:
+                  print(f"| {h['RuleID']} | `{h['File']}` | {h['StartLine']} |")
+          PY
+          
+# Lint de YAML + segurança dos workflows.
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Instala ferramentas de CI fixadas
+        run: |
+          python -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install -q --require-hashes -r requirements-ci-tools.txt
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      - name: yamllint
+        run: yamllint -c .yamllint.yml rules cases vitrix.yml
+      - name: zizmor (workflows)
+        run: zizmor --min-severity medium .github/workflows
+
+  # Vulns no toolchain que gera as queries + SBOM dele.
+  toolchain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Instala o toolchain fixado
+        run: |
+          python -m venv .tool
+          .tool/bin/pip install -q -r requirements-ci.txt
+      - name: Instala ferramentas de CI fixadas
+        run: |
+          python -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install -q --require-hashes -r requirements-ci-tools.txt
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      - name: pip-audit
+        run: |
+          SITE=$(.tool/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+          pip-audit --path "$SITE" --desc on --strict
+      - name: SBOM do toolchain (opcional)
+        id: sbom
+        continue-on-error: true
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          path: .tool
+          format: cyclonedx-json
+          output-file: sbom-toolchain.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.sbom.outcome == 'success'
+        with:
+          name: sbom-toolchain
+          path: sbom-toolchain.cdx.json
