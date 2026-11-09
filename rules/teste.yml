@@ -1,0 +1,20 @@
+title: TESTE
+id: 33a32ab0-22fa-4184-8a8c-3c4d217a14e7
+status: experimental
+description: TESTE
+author: DAVI
+date: 2026-11-09
+tags:
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  category: NONE
+  product: linux
+detection:
+  selection:
+    Image|endswith: '\powershell.exe'
+    CommandLine|contains: ' -enc '
+  condition: selection
+falsepositives:
+  - Legitimate automation
+level: medium
