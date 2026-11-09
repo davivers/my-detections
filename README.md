@@ -11,7 +11,7 @@ datasets/         logs for replay, with <name>.expect.yml expectations
 .github/          the CI workflow that validates every change
 ```
 
-## Work on it
+## Work on itd
 
 ```bash
 vitrix check --strict --gate   # lint + conversion + tests + replay + quality gate
