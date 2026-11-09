@@ -17,7 +17,7 @@ env:
 #scan for secrets using gitleaks
 jobs:
   secrets:
-    runs-on: ubuntu_latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
@@ -30,14 +30,14 @@ jobs:
         run: |
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
           ./gitleaks git . --redact --no-banner --report-format sarif --report-path gitleaks.sarif
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
         if: always()
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks 
 
-#scan for company data within cases and generates an actions report summary  
-data-hygiene:
+  #scan for company data within cases and generates an actions report summary
+  data-hygiene:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -99,8 +99,12 @@ data-hygiene:
           echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
       - name: pip-audit
         run: |
-          SITE=$(.tool/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
-          pip-audit --path "$SITE" --desc on --strict
+          # Vitrix is not on PyPI, so --strict would abort on it. It is pinned by commit in requirements-ci.txt.
+          .tool/bin/pip freeze --exclude vitrix > "$RUNNER_TEMP/toolchain-freeze.txt"
+          # PYSEC-2026-2447 (diskcache 5.6.3): no fixed release yet. Exploiting it needs write access to the
+          # cache directory, and CI runners are ephemeral. Remove this exception once a fix ships.
+          pip-audit -r "$RUNNER_TEMP/toolchain-freeze.txt" --no-deps --disable-pip --desc on --strict \
+            --ignore-vuln PYSEC-2026-2447
       - name: SBOM do toolchain (opcional)
         id: sbom
         continue-on-error: true

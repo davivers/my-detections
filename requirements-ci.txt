@@ -1,0 +1,27 @@
+# Toolchain audited by the "toolchain" job. Versions match what CI installed for Vitrix 0.1.0.
+# Vitrix is not on PyPI, so it is pinned to a commit of its GitHub repository.
+vitrix @ git+https://github.com/davivers/vitrix.git@381509985ffcc986b98ce3960c19286cd0c82a74
+MarkupSafe==3.0.4
+certifi==2026.10.23
+charset_normalizer==3.5.2
+diskcache==5.6.3
+diskcache-stubs==5.6.3.6.20240818
+google-re2==1.1.20251105
+idna==3.20
+jinja2==3.1.6
+jq==1.13.0
+packaging==26.3
+pcre2==0.7.1
+pyparsing==3.3.3
+pysigma==1.5.1
+pysigma-backend-elasticsearch==2.1.1
+pysigma-backend-kusto==1.0.1
+pysigma-backend-splunk==2.1.0
+pysigma-pipeline-sysmon==2.0.0
+pysigma-pipeline-windows==2.0.1
+pyyaml==6.0.3
+regex==2026.11.9
+requests==2.34.2
+types-pyyaml==6.0.12.20261103
+typing-extensions==4.16.0
+urllib3==2.8.0

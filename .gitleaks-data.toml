@@ -1,0 +1,23 @@
+# Data hygiene rules for the "data-hygiene" job: detection content must not carry real company data.
+# Generic starting point. Add your own domains, hostnames and naming patterns below.
+title = "detection content data hygiene"
+
+[[rules]]
+id = "private-ipv4"
+description = "RFC 1918 address in detection content"
+regex = '''\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'''
+path = '''^(?:\./)?(?:rules|cases|datasets)[/\\]'''
+
+[[rules]]
+id = "email-address"
+description = "Email address in detection content"
+regex = '''\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'''
+path = '''^(?:\./)?(?:rules|cases|datasets)[/\\]'''
+[[rules.allowlists]]
+regexes = ['''@(?:[a-z0-9-]+\.)*example\.(?:com|org|net)$''']
+
+[[rules]]
+id = "internal-fqdn"
+description = "Internal hostname in detection content"
+regex = '''(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:corp|internal|intranet|lan|local)\b'''
+path = '''^(?:\./)?(?:rules|cases|datasets)[/\\]'''

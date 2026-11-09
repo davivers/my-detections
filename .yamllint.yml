@@ -1,0 +1,8 @@
+# Used by the "static" job in .github/workflows/dac-pipeline-security.yml.
+extends: default
+
+rules:
+  # Sigma rules and test cases carry long command lines.
+  line-length: disable
+  # Sigma files and Vitrix cases do not start with "---".
+  document-start: disable
